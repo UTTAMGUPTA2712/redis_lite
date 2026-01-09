@@ -92,9 +92,9 @@ async fn process_query(
                         .write_all(&parser::RespType::str_to_resp_byte(value))
                         .await?;
                 }
-                Err(_err) => {
+                Err(err) => {
                     socket
-                        .write_all(&parser::RespType::str_to_resp_byte(""))
+                        .write_all(&parser::RespType::str_to_resp_byte(&format!("{}", err)))
                         .await?;
                 }
             }
@@ -102,14 +102,14 @@ async fn process_query(
         }
         command::Command::Set => {
             match db.write(&command_vec) {
-                Ok(_) => {
+                Ok(value) => {
                     socket
-                        .write_all(&parser::RespType::str_to_resp_byte("OK"))
+                        .write_all(&parser::RespType::str_to_resp_byte(value))
                         .await?;
                 }
-                Err(_err) => {
+                Err(err) => {
                     socket
-                        .write_all(&parser::RespType::str_to_resp_byte(""))
+                        .write_all(&parser::RespType::str_to_resp_byte(&format!("{}", err)))
                         .await?;
                 }
             }
@@ -132,14 +132,14 @@ async fn process_query(
         }
         command::Command::Delete => {
             match db.delete(&command_vec) {
-                Ok(_) => {
+                Ok(value) => {
                     socket
-                        .write_all(&parser::RespType::str_to_resp_byte("OK"))
+                        .write_all(&parser::RespType::str_to_resp_byte(value))
                         .await?;
                 }
-                Err(_err) => {
+                Err(err) => {
                     socket
-                        .write_all(&parser::RespType::str_to_resp_byte(""))
+                        .write_all(&parser::RespType::str_to_resp_byte(&format!("{}", err)))
                         .await?;
                 }
             }
