@@ -22,6 +22,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = TcpListener::bind("127.0.0.1:6379").await?;
     let db = Arc::new(Mutex::new(db::Db::new(persist)));
+    let db_cleanup = Arc::clone(&db);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
+        loop {
+            interval.tick().await;
+
+            let current_time = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                .to_string();
+
+            db_cleanup.lock().await.remove_expired_key(current_time);
+        }
+    });
 
     loop {
         let (socket, _) = listener.accept().await?;
