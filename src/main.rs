@@ -1,4 +1,5 @@
 use bytes::BytesMut;
+use std::env;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -15,8 +16,12 @@ mod parser;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = env::args().collect::<Vec<String>>();
+
+    let persist = args.contains(&"--persist".to_string());
+
     let listener = TcpListener::bind("127.0.0.1:6379").await?;
-    let db = Arc::new(Mutex::new(db::Db::new()));
+    let db = Arc::new(Mutex::new(db::Db::new(persist)));
 
     loop {
         let (socket, _) = listener.accept().await?;

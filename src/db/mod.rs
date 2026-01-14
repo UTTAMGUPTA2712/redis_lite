@@ -1,14 +1,64 @@
 use bytes::Bytes;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
 
 pub struct Db {
     entries: HashMap<String, Bytes>,
+    persist: bool,
 }
 
 impl Db {
-    pub fn new() -> Db {
+    pub fn new(persist: bool) -> Db {
+        if persist {
+            let mut db = Db {
+                entries: HashMap::new(),
+                persist,
+            };
+            db.read_from_file();
+            return db;
+        }
         Db {
             entries: HashMap::new(),
+            persist,
+        }
+    }
+
+    fn save(&self) {
+        if self.persist {
+            self.write_to_file();
+        }
+    }
+
+    fn make_file(&self) -> File {
+        File::create("db.txt").unwrap()
+    }
+
+    fn write_to_file(&self) {
+        // save the entries in a .txt file
+        let mut file = File::create("db.txt").unwrap();
+        for (key, value) in &self.entries {
+            file.write_all(format!("{}:{}\n", key, String::from_utf8_lossy(value)).as_bytes()).unwrap();
+        }
+        file.flush().unwrap();
+    }
+
+    fn read_from_file(&mut self) {
+        let mut file = match File::open("db.txt") {
+            Ok(f) => f,
+            Err(_) => {
+                self.make_file();
+                return;
+            }
+        };
+
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+
+        for line in contents.lines() {
+            let (key, value) = line.split_once(':').unwrap();
+            self.entries.insert(String::from(key), Bytes::from(value.to_string()));
         }
     }
 
@@ -21,6 +71,8 @@ impl Db {
 
         let val = value.clone();
         let res: &Option<Bytes> = &self.entries.insert(String::from(key), Bytes::from(val));
+
+        self.save();
 
         match res {
             Some(_res) => Ok("r OK"),
@@ -51,6 +103,8 @@ impl Db {
         }
         let key = &arr[1];
         let res = self.entries.remove(key);
+
+        self.save();
 
         match res {
             Some(_res) => Ok("OK"),
